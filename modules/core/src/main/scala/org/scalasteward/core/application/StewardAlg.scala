@@ -20,6 +20,7 @@ import better.files.File
 import cats.Monad
 import cats.effect.ExitCode
 import cats.implicits._
+import fs2.Stream
 import io.chrisdavenport.log4cats.Logger
 import org.scalasteward.core.io.{FileAlg, WorkspaceAlg}
 import org.scalasteward.core.nurture.NurtureAlg
@@ -39,6 +40,7 @@ final class StewardAlg[F[_]](
     nurtureAlg: NurtureAlg[F],
     repoCacheAlg: RepoCacheAlg[F],
     sbtAlg: SbtAlg[F],
+    streamCompiler: Stream.Compiler[F, F],
     updateService: UpdateService[F],
     workspaceAlg: WorkspaceAlg[F],
     F: Monad[F]
@@ -59,7 +61,7 @@ final class StewardAlg[F[_]](
   def pruneRepos(repos: List[Repo]): F[List[Repo]] =
     logger.infoTotalTime("pruning repos") {
       for {
-        _ <- repos.traverse(repoCacheAlg.checkCache)
+        _ <- repos.traverse_(repoCacheAlg.checkCache)
         allUpdates <- updateService.checkForUpdates(repos)
         filteredRepos <- updateService.filterByApplicableUpdates(repos, allUpdates)
         countTotal = repos.size
@@ -78,7 +80,7 @@ final class StewardAlg[F[_]](
         _ <- prepareEnv
         repos <- readRepos(config.reposFile)
         reposToNurture <- if (config.pruneRepos) pruneRepos(repos) else F.pure(repos)
-        result <- reposToNurture.traverse(nurtureAlg.nurture)
-      } yield if (result.forall(_.isRight)) ExitCode.Success else ExitCode.Error
+        result <- Stream.emits(reposToNurture).evalMap(nurtureAlg.nurture).compile.foldMonoid
+      } yield result.fold(_ => ExitCode.Error, _ => ExitCode.Success)
     }
 }
