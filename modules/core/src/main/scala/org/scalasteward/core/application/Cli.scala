@@ -20,10 +20,10 @@ import caseapp._
 import caseapp.core.Error.MalformedValue
 import caseapp.core.argparser.{ArgParser, SimpleArgParser}
 import cats.implicits._
-import org.http4s.{Http4sLiteralSyntax, Uri}
+import org.http4s.Uri
+import org.http4s.syntax.literals._
 import org.scalasteward.core.application.Cli._
 import org.scalasteward.core.util.ApplicativeThrowable
-
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -50,7 +50,6 @@ object Cli {
       disableSandbox: Boolean = false,
       doNotFork: Boolean = false,
       ignoreOptsFiles: Boolean = false,
-      keepCredentials: Boolean = false,
       envVar: List[EnvVar] = Nil,
       pruneRepos: Boolean = false,
       processTimeout: FiniteDuration = 10.minutes
@@ -75,28 +74,22 @@ object Cli {
       s => Uri.fromString(s).leftMap(pf => MalformedValue("Uri", pf.message))
     )
 
-  implicit val finiteDurationParser: ArgParser[FiniteDuration] =
+  implicit val finiteDurationParser: ArgParser[FiniteDuration] = {
+    val error = Left(
+      MalformedValue(
+        "FiniteDuration",
+        "The value is expected in the following format: <length><unit>"
+      )
+    )
     ArgParser[String].xmapError(
       _.toString(),
       s =>
         Try {
           Duration(s) match {
             case fd: FiniteDuration => Right(fd)
-            case _ =>
-              Left(
-                MalformedValue(
-                  "FiniteDuration",
-                  "The value is expected in the following format: <length><unit>"
-                )
-              )
+            case _                  => error
           }
-        }.getOrElse(
-          Left(
-            MalformedValue(
-              "FiniteDuration",
-              "The value is expected in the following format: <length><unit>"
-            )
-          )
-        )
+        }.getOrElse(error)
     )
+  }
 }

@@ -19,7 +19,7 @@ package org.scalasteward.core.vcs.data
 import cats.implicits._
 import io.circe.Encoder
 import io.circe.generic.semiauto._
-import org.scalasteward.core.data.{SemVer, Update}
+import org.scalasteward.core.data.{GroupId, SemVer, Update}
 import org.scalasteward.core.git.Branch
 import org.scalasteward.core.nurture.UpdateData
 import org.scalasteward.core.repoconfig.RepoConfigAlg
@@ -39,7 +39,6 @@ object NewPullRequestData {
 
   def bodyFor(
       update: Update,
-      login: String,
       artifactIdToUrl: Map[String, String],
       branchCompareUrl: Option[String],
       releaseNoteUrl: Option[String]
@@ -53,7 +52,7 @@ object NewPullRequestData {
         |
         |I'll automatically update this PR to resolve conflicts as long as you don't change it yourself.
         |
-        |If you'd like to skip this version, you can just close this PR. If you have any feedback, just mention @$login in the comments below.
+        |If you'd like to skip this version, you can just close this PR. If you have any feedback, just mention me in the comments below.
         |
         |Have a fantastic day writing Scala!
         |
@@ -95,7 +94,7 @@ object NewPullRequestData {
     }
 
   def artifactWithOptionalUrl(
-      groupId: String,
+      groupId: GroupId,
       artifactId: String,
       artifactId2Url: Map[String, String]
   ): String =
@@ -132,7 +131,6 @@ object NewPullRequestData {
   def from(
       data: UpdateData,
       branchName: String,
-      authorLogin: String,
       artifactIdToUrl: Map[String, String] = Map.empty,
       branchCompareUrl: Option[String] = None,
       releaseNoteUrl: Option[String] = None
@@ -141,7 +139,6 @@ object NewPullRequestData {
       title = git.commitMsgFor(data.update),
       body = bodyFor(
         data.update,
-        authorLogin,
         artifactIdToUrl,
         branchCompareUrl,
         releaseNoteUrl
