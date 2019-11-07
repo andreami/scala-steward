@@ -19,8 +19,10 @@ package org.scalasteward.core.application
 import cats.effect._
 import io.chrisdavenport.log4cats.Logger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
+import org.eclipse.jetty.client.HttpClient
+import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.http4s.client.Client
-import org.http4s.client.asynchttpclient.AsyncHttpClient
+import org.http4s.client.jetty.JettyClient
 import org.scalasteward.core.coursier.CoursierAlg
 import org.scalasteward.core.edit.EditAlg
 import org.scalasteward.core.git.GitAlg
@@ -44,7 +46,9 @@ object Context {
       blocker <- Blocker[F]
       cliArgs_ <- Resource.liftF(new Cli[F].parseArgs(args))
       implicit0(config: Config) <- Resource.liftF(Config.create[F](cliArgs_))
-      implicit0(client: Client[F]) <- AsyncHttpClient.resource[F]()
+      implicit0(client: Client[F]) <- JettyClient.resource[F](
+        new HttpClient(new SslContextFactory.Client())
+      )
       implicit0(logger: Logger[F]) <- Resource.liftF(Slf4jLogger.create[F])
       implicit0(httpExistenceClient: HttpExistenceClient[F]) <- HttpExistenceClient.create[F]
       implicit0(user: AuthenticatedUser) <- Resource.liftF(config.vcsUser[F])

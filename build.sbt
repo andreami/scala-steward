@@ -39,8 +39,8 @@ lazy val core = myCrossProject("core")
       Dependencies.coursierCore,
       Dependencies.coursierCatsInterop,
       Dependencies.fs2Core,
-      Dependencies.http4sAsyncHttpClient,
       Dependencies.http4sCirce,
+      Dependencies.http4sJettyClient,
       Dependencies.log4catsSlf4j,
       Dependencies.monocleCore,
       Dependencies.refined,
@@ -63,9 +63,6 @@ lazy val core = myCrossProject("core")
       {
         case PathList(ps @ _*) if nativeSuffix.findFirstMatchIn(ps.last).isDefined =>
           MergeStrategy.first
-        case PathList(ps @ _*) if ps.last == "io.netty.versions.properties" =>
-          // This is included in Netty JARs which are pulled in by http4s-async-http-client.
-          MergeStrategy.first
         case otherwise =>
           val defaultStrategy = (assemblyMergeStrategy in assembly).value
           defaultStrategy(otherwise)
@@ -85,13 +82,11 @@ lazy val core = myCrossProject("core")
       import _root_.io.chrisdavenport.log4cats.Logger
       import _root_.io.chrisdavenport.log4cats.slf4j.Slf4jLogger
       import org.http4s.client.Client
-      import org.http4s.client.asynchttpclient.AsyncHttpClient
       import scala.concurrent.ExecutionContext
 
       implicit val ioContextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
       implicit val ioTimer: Timer[IO] = IO.timer(ExecutionContext.global)
       implicit val logger: Logger[IO] = Slf4jLogger.getLogger[IO]
-      implicit val client: Client[IO] = AsyncHttpClient.allocate[IO]().map(_._1).unsafeRunSync
     """,
     fork in run := true,
     fork in Test := true
